@@ -1,14 +1,16 @@
 #[derive(Debug, Clone)]
 pub struct Task {
+    pub name: String,
     pub duration: usize,
     pub period: usize,
-    state: TaskState,
+    pub state: TaskState,
 }
 
 impl Task {
-    pub fn new(time: usize, period: usize) -> Self {
+    pub fn new(name: String, duration: usize, period: usize) -> Self {
         Self {
-            duration: time,
+            name,
+            duration,
             period,
             state: TaskState::InProgress(0),
         }
@@ -25,17 +27,21 @@ impl Task {
         }
     }
 
-    // 0 1 2 3 4 5 6 7
-    // 3 2 1 3 2 1 3 2
-    //%0 1 2 0 1 2 0 1
+    pub fn is_done(&self) -> bool {
+        if let TaskState::Done = self.state {
+            true
+        } else {
+            false
+        }
+    }
 
-    pub fn until_deadline(&self, step:usize) -> usize {
+    pub fn until_deadline(&self, step: usize) -> usize {
         self.period - step % self.period
     }
 
     pub fn execute(&mut self) {
         match &mut self.state {
-            TaskState::InProgress(x) if *x + 1 < self.duration=> *x += 1,
+            TaskState::InProgress(x) if *x + 1 < self.duration => *x += 1,
             s => *s = TaskState::Done,
         }
     }

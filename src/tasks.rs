@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::task::Task;
+use crate::task::{Task, TaskState};
 
 #[derive(Debug, Clone)]
 pub struct Tasks {
@@ -23,7 +23,8 @@ impl From<Vec<(usize, usize)>> for Tasks {
         Self::from(
             tasks
                 .into_iter()
-                .map(|(work, period)| Task::new(work, period))
+                .enumerate()
+                .map(|(i, (work, period))| Task::new(format!("{}", i), work, period))
                 .collect::<Vec<Task>>(),
         )
     }
@@ -34,12 +35,25 @@ impl Tasks {
         self.tasks.iter().fold(1, |acc: usize, t| acc * t.period)
     }
 
-    pub fn get_active_task(&self, step: usize) -> Option<&mut Task> {
-        todo!()
+    pub fn get_active_task(&mut self, step: usize) -> Option<&mut Task> {
+        self.tasks
+            .iter_mut()
+            .fold(None, |selected: Option<&mut Task>, t| match (selected, t) {
+                (sel, t) if t.is_done() => sel,
+                (Some(t1), t2) if t1.until_deadline(step) <= t2.until_deadline(step) => Some(t1),
+                (_, t) => Some(t),
+            })
     }
 
-    pub fn test(&mut self) -> &mut Task {
-        &mut self.tasks[0]
+    pub fn get(&mut self, step: usize) {
+        for t in self.tasks.iter_mut() {
+            if step != 0 && step % t.period == 0 {
+                if !t.is_done() {
+                    println!("ERROR")
+                }
+                t.state = TaskState::InProgress(0)
+            }
+        }
     }
 }
 
@@ -51,10 +65,11 @@ fn get_utilization(vec: &Vec<Task>) -> f64 {
 impl Display for Tasks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Tasks:")?;
-        for (i, task) in self.tasks.iter().enumerate() {
+        for task in self.tasks.iter() {
             writeln!(
                 f,
-                "Task {i}: {} {}",
+                "Task {}: {} {}",
+                task.name,
                 task.get_remaining_work(),
                 task.until_deadline(0)
             )?;

@@ -1,4 +1,4 @@
-use std::ops::{Add, Bound, Bound::*, RangeBounds };
+use std::ops::{Add, Bound, Bound::*, RangeBounds};
 
 use crate::{task::Task, tasks::Tasks};
 
@@ -13,26 +13,40 @@ impl Scheduler {
         Self { is_preemptive }
     }
 
-    pub fn get_scheduling<R>(&self, mut tasks: Tasks, cycle_range: R) -> String
+    pub fn get_scheduling<R>(&self, tasks: &mut Tasks, cycle_range: R) -> String
     where
         R: RangeBounds<usize> + Iterator,
     {
         let total_period = tasks.get_total_period();
         let range = 0..cap_bound(cycle_range.end_bound(), total_period);
 
-        let str = "";
+        let mut str = "".to_string();
 
         let mut active_task: Option<&mut Task> = None;
 
-        active_task = Some(tasks.test());
-
         for step in range {
-            match &mut active_task {
-                Some(task) if !self.is_preemptive => task.execute(),
-                _ => active_task = tasks.get_active_task(step),
+            //tasks.get(step);
+
+            active_task = match active_task {
+                Some(task) if !self.is_preemptive => Some(task),
+                Some(_) => tasks.get_active_task(step),
+                None => tasks.get_active_task(step),
+            };
+            active_task = if let Some(task) = active_task {
+                task.execute();
+                str.push_str(&task.name);
+
+                if task.is_done() {
+                    None
+                } else {
+                    Some(task)
+                }
+            } else {
+                str.push_str("x");
+                None
             }
         }
-        String::from(str)
+        str
     }
 }
 

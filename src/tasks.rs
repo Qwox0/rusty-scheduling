@@ -6,6 +6,7 @@ use crate::task::{Task, TaskState};
 pub struct Tasks {
     tasks: Vec<Task>,
     pub utilization: f64,
+    active_task: Option<()>,
 }
 
 impl From<Vec<Task>> for Tasks {
@@ -14,7 +15,11 @@ impl From<Vec<Task>> for Tasks {
         if utilization > 1.0 {
             println!("WARN: too much work! :(")
         }
-        Self { tasks, utilization }
+        Self {
+            tasks,
+            utilization,
+            active_task: None,
+        }
     }
 }
 
@@ -35,25 +40,25 @@ impl Tasks {
         self.tasks.iter().fold(1, |acc: usize, t| acc * t.period)
     }
 
-    pub fn get_active_task(&mut self, step: usize) -> Option<&mut Task> {
+    pub fn get_active_task(&self, step: usize) -> Option<&Task> {
         self.tasks
-            .iter_mut()
-            .fold(None, |selected: Option<&mut Task>, t| match (selected, t) {
+            .iter()
+            .fold(None, |selected: Option<&Task>, t| match (selected, t) {
                 (sel, t) if t.is_done() => sel,
                 (Some(t1), t2) if t1.until_deadline(step) <= t2.until_deadline(step) => Some(t1),
                 (_, t) => Some(t),
             })
     }
 
-    pub fn get(&mut self, step: usize) {
-        for t in self.tasks.iter_mut() {
+    pub fn reset_tasks(&mut self, step: usize) {
+        self.tasks.iter_mut().for_each(|t| {
             if step != 0 && step % t.period == 0 {
                 if !t.is_done() {
                     println!("ERROR")
                 }
                 t.state = TaskState::InProgress(0)
             }
-        }
+        });
     }
 }
 

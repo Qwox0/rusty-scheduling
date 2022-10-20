@@ -6,48 +6,45 @@ use crate::{task::Task, tasks::Tasks};
 /// and Earliest Due Date (non-preemptive; must finish task)
 pub struct Scheduler {
     is_preemptive: bool,
+    waiting_tasks: Vec<Task>,
+    active_task: Option<Task>,
 }
 
 impl Scheduler {
     pub fn new(is_preemptive: bool) -> Self {
-        Self { is_preemptive }
+        Self {
+            is_preemptive,
+            waiting_tasks: vec![],
+            active_task: None,
+        }
     }
 
-    pub fn get_scheduling<R>(&self, tasks: &mut Tasks, cycle_range: R) -> String
+    pub fn get_scheduling<R>(&mut self, tasks: Vec<Task>, cycle_range: R) -> String
     where
         R: RangeBounds<usize> + Iterator,
     {
-        let total_period = tasks.get_total_period();
-        let range = 0..cap_bound(cycle_range.end_bound(), total_period);
-
+        //let total_period = tasks.get_total_period();
+        //let range = 0..cap_bound(cycle_range.end_bound(), total_period);
         let mut str = "".to_string();
 
-        let mut active_task: Option<&mut Task> = None;
+        for step in 0..30 {
+            self.refresh_tasks(&tasks);
 
-        for step in range {
-            //tasks.get(step);
-
-            active_task = match active_task {
-                Some(task) if !self.is_preemptive => Some(task),
-                Some(_) => tasks.get_active_task(step),
-                None => tasks.get_active_task(step),
-            };
-            active_task = if let Some(task) = active_task {
-                task.execute();
-                str.push_str(&task.name);
-
-                if task.is_done() {
-                    None
-                } else {
-                    Some(task)
-                }
-            } else {
-                str.push_str("x");
-                None
+            match &self.active_task {
+                Some(task) if task.is_done() => self.active_task = None,
+                _ => (),
             }
         }
+
         str
     }
+
+    fn refresh_tasks(&mut self, tasks: &Vec<Task>) {
+
+        //self.waiting_tasks.append()
+    }
+
+    fn find_active_task(&mut self) {}
 }
 
 fn cap_bound<T>(bound: Bound<&T>, max: T) -> T

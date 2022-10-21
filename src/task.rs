@@ -39,11 +39,12 @@ impl Task {
         self.period - step % self.period
     }
 
-    pub fn execute(&mut self) {
+    pub fn execute(&mut self) -> String {
         match &mut self.state {
             TaskState::InProgress(x) if *x + 1 < self.duration => *x += 1,
             s => *s = TaskState::Done,
-        }
+        };
+        self.name.clone()
     }
 }
 

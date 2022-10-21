@@ -1,84 +1,98 @@
-use std::fmt::Display;
+use std::{fmt::Display, slice::Iter};
 
 use crate::task::{Task, TaskState};
 
 #[derive(Debug, Clone)]
 pub struct Tasks {
     tasks: Vec<Task>,
-    pub utilization: f64,
-    active_task: Option<()>,
-}
-
-impl From<Vec<Task>> for Tasks {
-    fn from(tasks: Vec<Task>) -> Self {
-        let utilization = get_utilization(&tasks);
-        if utilization > 1.0 {
-            println!("WARN: too much work! :(")
-        }
-        Self {
-            tasks,
-            utilization,
-            active_task: None,
-        }
-    }
 }
 
 impl From<Vec<(usize, usize)>> for Tasks {
     fn from(tasks: Vec<(usize, usize)>) -> Self {
-        Self::from(
-            tasks
+        let s = Self {
+            tasks: tasks
                 .into_iter()
                 .enumerate()
-                .map(|(i, (work, period))| Task::new(format!("{}", i), work, period))
+                .map(|(i, (work, period))| Task::new(format!("{}", i + 1), work, period))
                 .collect::<Vec<Task>>(),
-        )
+        };
+        if s.get_total_utilization() > 1.0 {
+            println!("WARN: too much work! :(");
+        }
+        s
     }
 }
 
 impl Tasks {
     pub fn get_total_period(&self) -> usize {
-        self.tasks.iter().fold(1, |acc: usize, t| acc * t.period)
+        lcm(self.tasks.iter().map(|t| t.period).collect())
     }
 
-    pub fn get_active_task(&self, step: usize) -> Option<&Task> {
-        self.tasks
-            .iter()
-            .fold(None, |selected: Option<&Task>, t| match (selected, t) {
-                (sel, t) if t.is_done() => sel,
-                (Some(t1), t2) if t1.until_deadline(step) <= t2.until_deadline(step) => Some(t1),
-                (_, t) => Some(t),
-            })
+    pub fn get_total_utilization(&self) -> f64 {
+        self.tasks.iter().fold(0.0, |acc: f64, t:&Task| {
+            acc + t.get_utilization()
+        })
     }
 
-    pub fn reset_tasks(&mut self, step: usize) {
-        self.tasks.iter_mut().for_each(|t| {
-            if step != 0 && step % t.period == 0 {
-                if !t.is_done() {
-                    println!("ERROR")
-                }
-                t.state = TaskState::InProgress(0)
-            }
-        });
+    pub fn iter(&self) -> Iter<'_, Task> {
+        self.tasks.iter()
     }
-}
-
-fn get_utilization(vec: &Vec<Task>) -> f64 {
-    vec.iter()
-        .fold(0.0, |acc: f64, t| acc + t.get_total_utilization())
 }
 
 impl Display for Tasks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Tasks:")?;
+        writeln!(f, "Tasks (utilization: {}%, total_period: {}):", self.get_total_utilization()*100.0, self.get_total_period())?;
         for task in self.tasks.iter() {
             writeln!(
                 f,
-                "Task {}: {} {}",
+                "Task {}: {}/{}",
                 task.name,
                 task.get_remaining_work(),
                 task.until_deadline(0)
             )?;
         }
         Ok(())
+    }
+}
+
+/// see: https://en.wikipedia.org/wiki/Least_common_multiple#Using_a_simple_algorithm
+fn lcm(nums: Vec<usize>) -> usize {
+    match nums.len() {
+        0 => 0,
+        _ => {
+            let mut arr = nums.clone();
+            loop {
+                let start = (0, arr[0]);
+                if arr.iter().all(|n: &usize| *n == start.1) {
+                    break start.1;
+                }
+                let (i, _) = arr.iter().enumerate().skip(1).fold(start, |acc, (i, num)| {
+                    if *num < acc.1 {
+                        (i, *num)
+                    } else {
+                        acc
+                    }
+                });
+                arr[i] += nums[i];
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_lcm() {
+        let lcm = super::lcm(vec![3]);
+        assert_eq!(lcm, 3);
+
+        let lcm = super::lcm(vec![3, 5]);
+        assert_eq!(lcm, 15);
+
+        let lcm = super::lcm(vec![3, 5, 7]);
+        assert_eq!(lcm, 105);
+
+        let lcm = super::lcm(vec![3, 3, 3]);
+        assert_eq!(lcm, 3);
     }
 }

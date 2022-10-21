@@ -16,15 +16,15 @@ impl Task {
         }
     }
 
-    pub fn get_total_utilization(&self) -> f64 {
-        self.duration as f64 / self.period as f64
-    }
-
     pub fn get_remaining_work(&self) -> usize {
         match self.state {
             TaskState::InProgress(x) => self.duration - x,
             TaskState::Done => 0,
         }
+    }
+
+    pub fn get_utilization(&self) -> f64 {
+        self.duration as f64 / self.period as f64
     }
 
     pub fn is_done(&self) -> bool {
